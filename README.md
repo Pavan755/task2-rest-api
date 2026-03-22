@@ -356,6 +356,38 @@ RateLimit-Remaining: 99
 - [x] AI assistance disclosed transparently
 ---
 
+## Live API Test Proof
+
+### Note creation on live server
+![Note creation proof](/screenshots/Screenshot%202026-03-22%20170828.png)
+
+The screenshot shows a note being created on the live Render server with:
+- Real JWT token used in Authorization header
+- Response confirms note saved with id, userId, title, content and timestamp
+
+### Rate limiter working on live server
+![Rate limiter proof](/screenshots/Screenshot%202026-03-22%20170807.png)
+
+The screenshot shows 11 rapid login attempts sent to the live server:
+- Requests 1–8: `401 Unauthorized` — wrong password, server processed normally
+- Requests 9–11: `429 Too Many Requests` — rate limiter triggered and blocked
+- This confirms express-rate-limit is active and working on the deployed API
+
+### Security headers on live server
+Verified using `Invoke-WebRequest` against the live URL:
+```
+Content-Security-Policy:  default-src 'self'...
+X-Frame-Options:          SAMEORIGIN
+X-Content-Type-Options:   nosniff
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+RateLimit-Policy:         100;w=900
+RateLimit-Remaining:      99
+Access-Control-Allow-Origin: http://localhost:5173
+```
+All 11 helmet security headers confirmed active on live deployment.
+
+--
+
 ## What I Learned
 
 1. **Backend is just a program that listens for HTTP requests**
