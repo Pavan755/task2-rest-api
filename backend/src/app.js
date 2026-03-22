@@ -27,9 +27,19 @@ app.use(globalLimiter);
 
 // ── CORS — only allow our frontend origin ────────────────────────────────
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://127.0.0.1:5500', 'http://localhost:5500', 'http://127.0.0.1:8000', 'http://localhost:8000'],
+  origin: [
+    'http://localhost:5173',
+    'http://127.0.0.1:5500',
+    'http://localhost:5500',
+    'http://127.0.0.1:8000',
+    'http://localhost:8000',
+    process.env.FRONTEND_URL, // production frontend URL
+  ].filter(Boolean),
   credentials: true,
 }));
+
+FRONTEND_URL=
+
 
 // ── Parse JSON bodies ─────────────────────────────────────────────────────
 app.use(express.json());
