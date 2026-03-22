@@ -1,4 +1,5 @@
-const BASE_URL = 'http://localhost:5000/api';
+// const BASE_URL = 'http://localhost:5000/api';
+const BASE_URL = 'https://task2-rest-api.onrender.com/api';
 
 // ── Token helpers ─────────────────────────────────────────────────────────
 const getAccessToken  = () => localStorage.getItem('accessToken');
