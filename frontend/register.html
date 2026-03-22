@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register — Notes API</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, sans-serif;
+      background: #f4f6fb;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .card {
+      background: white; border-radius: 12px;
+      padding: 2rem; width: 100%; max-width: 400px;
+      box-shadow: 0 2px 16px rgba(0,0,0,0.08);
+    }
+
+    h1 { font-size: 1.5rem; margin-bottom: 0.25rem; color: #1a1a2e; }
+    p.subtitle { color: #666; margin-bottom: 1.5rem; font-size: 0.9rem; }
+
+    label { display: block; font-size: 0.85rem; font-weight: 600;
+            color: #333; margin-bottom: 0.3rem; }
+
+    input {
+      width: 100%; padding: 0.65rem 0.9rem;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 1rem; margin-bottom: 1rem;
+      transition: border-color 0.2s;
+    }
+    input:focus { outline: none; border-color: #4f46e5; }
+
+    button {
+      width: 100%; padding: 0.75rem;
+      background: #4f46e5; color: white;
+      border: none; border-radius: 8px;
+      font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    button:hover { background: #4338ca; }
+    button:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .error {
+      background: #fef2f2; color: #dc2626;
+      border: 1px solid #fecaca; border-radius: 8px;
+      padding: 0.65rem 0.9rem; margin-bottom: 1rem;
+      font-size: 0.9rem; display: none;
+    }
+
+    .link { text-align: center; margin-top: 1rem; font-size: 0.9rem; color: #666; }
+    .link a { color: #4f46e5; text-decoration: none; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Create account</h1>
+    <p class="subtitle">Get started with Notes API</p>
+
+    <div class="error" id="error"></div>
+
+    <label for="username">Username</label>
+    <input type="text" id="username" placeholder="yourname" />
+
+    <label for="email">Email</label>
+    <input type="email" id="email" placeholder="you@example.com" />
+
+    <label for="password">Password</label>
+    <input type="password" id="password" placeholder="Min 8 characters" />
+
+    <button id="registerBtn">Create account</button>
+
+    <p class="link">Already have an account? <a href="login.html">Sign in</a></p>
+  </div>
+
+  <script src="api.js"></script>
+  <script>
+    if (getAccessToken()) window.location.href = 'dashboard.html';
+
+    const errorEl     = document.getElementById('error');
+    const registerBtn = document.getElementById('registerBtn');
+
+    registerBtn.addEventListener('click', async () => {
+      const username = document.getElementById('username').value.trim();
+      const email    = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!username || !email || !password) {
+        errorEl.textContent = 'Please fill in all fields.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      if (password.length < 8) {
+        errorEl.textContent = 'Password must be at least 8 characters.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      registerBtn.disabled = true;
+      registerBtn.textContent = 'Creating account...';
+      errorEl.style.display = 'none';
+
+      const data = await register(username, email, password);
+
+      if (data.errors || data.error) {
+        errorEl.textContent = data.error || data.errors[0].msg;
+        errorEl.style.display = 'block';
+        registerBtn.disabled = false;
+        registerBtn.textContent = 'Create account';
+        return;
+      }
+
+      saveTokens(data.accessToken, data.refreshToken);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      window.location.href = 'dashboard.html';
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') registerBtn.click();
+    });
+  </script>
+</body>
+</html>

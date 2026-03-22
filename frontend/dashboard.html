@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Notes API</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body { font-family: system-ui, sans-serif; background: #f4f6fb;
+           min-height: 100vh; }
+
+    header {
+      background: white; padding: 1rem 2rem;
+      display: flex; justify-content: space-between; align-items: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+
+    header h1 { font-size: 1.2rem; color: #1a1a2e; }
+    header span { font-size: 0.9rem; color: #666; }
+
+    .logout {
+      background: none; border: 1.5px solid #e5e7eb;
+      color: #374151; padding: 0.4rem 1rem;
+      border-radius: 8px; cursor: pointer; font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+    .logout:hover { background: #f9fafb; border-color: #d1d5db; }
+
+    main { max-width: 700px; margin: 2rem auto; padding: 0 1rem; }
+
+    .add-card {
+      background: white; border-radius: 12px; padding: 1.5rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 2rem;
+    }
+
+    .add-card h2 { font-size: 1rem; margin-bottom: 1rem; color: #374151; }
+
+    input[type="text"], textarea {
+      width: 100%; padding: 0.65rem 0.9rem;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 0.95rem; margin-bottom: 0.75rem;
+      font-family: inherit; transition: border-color 0.2s;
+    }
+    input:focus, textarea:focus { outline: none; border-color: #4f46e5; }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .add-btn {
+      background: #4f46e5; color: white; border: none;
+      padding: 0.65rem 1.5rem; border-radius: 8px;
+      font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .add-btn:hover { background: #4338ca; }
+    .add-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
+    .notes-header {
+      display: flex; justify-content: space-between;
+      align-items: center; margin-bottom: 1rem;
+    }
+    .notes-header h2 { font-size: 1rem; color: #374151; }
+    .badge {
+      background: #ede9fe; color: #4f46e5;
+      padding: 0.2rem 0.6rem; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+
+    .note-card {
+      background: white; border-radius: 10px; padding: 1.25rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex; justify-content: space-between;
+      align-items: flex-start; gap: 1rem;
+    }
+
+    .note-card h3 { font-size: 0.95rem; color: #1a1a2e; margin-bottom: 0.25rem; }
+    .note-card p { font-size: 0.85rem; color: #666; line-height: 1.5; }
+    .note-card time { font-size: 0.75rem; color: #aaa; display: block;
+                      margin-top: 0.4rem; }
+
+    .delete-btn {
+      background: none; border: none; cursor: pointer;
+      color: #dc2626; font-size: 1.1rem; padding: 0.2rem 0.4rem;
+      border-radius: 6px; transition: background 0.2s; flex-shrink: 0;
+    }
+    .delete-btn:hover { background: #fef2f2; }
+
+    .empty {
+      text-align: center; padding: 3rem 1rem;
+      color: #9ca3af; font-size: 0.95rem;
+    }
+
+    .error {
+      background: #fef2f2; color: #dc2626;
+      border: 1px solid #fecaca; border-radius: 8px;
+      padding: 0.65rem 0.9rem; margin-bottom: 1rem;
+      font-size: 0.9rem; display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>📝 My Notes</h1>
+    <div style="display:flex; align-items:center; gap:1rem;">
+      <span id="welcomeMsg"></span>
+      <button class="logout" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <main>
+    <div class="add-card">
+      <h2>Add a new note</h2>
+      <div class="error" id="addError"></div>
+      <input type="text" id="noteTitle" placeholder="Title" />
+      <textarea id="noteContent" placeholder="Content (optional)"></textarea>
+      <button class="add-btn" id="addBtn">Add note</button>
+    </div>
+
+    <div class="notes-header">
+      <h2>Your notes</h2>
+      <span class="badge" id="noteCount">0 notes</span>
+    </div>
+
+    <div id="notesList"></div>
+  </main>
+
+  <script src="api.js"></script>
+  <script>
+    // Guard — redirect to login if not authenticated
+    if (!getAccessToken()) window.location.href = 'login.html';
+
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    document.getElementById('welcomeMsg').textContent =
+      `Hi, ${user.username || 'there'} ${user.role === 'admin' ? '👑' : ''}`;
+
+    // ── Logout ──────────────────────────────────────────────────────────────
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      clearTokens();
+      window.location.href = 'login.html';
+    });
+
+    // ── Render notes ────────────────────────────────────────────────────────
+    const renderNotes = (notes) => {
+      const list = document.getElementById('notesList');
+      document.getElementById('noteCount').textContent =
+        `${notes.length} note${notes.length !== 1 ? 's' : ''}`;
+
+      if (notes.length === 0) {
+        list.innerHTML = '<div class="empty">No notes yet. Add one above!</div>';
+        return;
+      }
+
+      list.innerHTML = notes.map(note => `
+        <div class="note-card">
+          <div>
+            <h3>${escapeHtml(note.title)}</h3>
+            ${note.content ? `<p>${escapeHtml(note.content)}</p>` : ''}
+            <time>${new Date(note.createdAt).toLocaleDateString()}</time>
+          </div>
+          <button class="delete-btn" onclick="handleDelete(${note.id})"
+                  title="Delete note">✕</button>
+        </div>
+      `).join('');
+    };
+
+    // XSS prevention — escape HTML before rendering user content
+    const escapeHtml = (str) => {
+      const div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    };
+
+    // ── Load notes ──────────────────────────────────────────────────────────
+    const loadNotes = async () => {
+      const data = await getNotes();
+      if (data.notes) renderNotes(data.notes);
+    };
+
+    // ── Add note ────────────────────────────────────────────────────────────
+    document.getElementById('addBtn').addEventListener('click', async () => {
+      const title   = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      const errorEl = document.getElementById('addError');
+
+      if (!title) {
+        errorEl.textContent = 'Title is required.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      errorEl.style.display = 'none';
+      document.getElementById('addBtn').disabled = true;
+
+      const data = await createNote(title, content);
+
+      document.getElementById('addBtn').disabled = false;
+
+      if (data.error) {
+        errorEl.textContent = data.error;
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      // Clear form and reload notes
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteContent').value = '';
+      loadNotes();
+    });
+
+    // ── Delete note ─────────────────────────────────────────────────────────
+    const handleDelete = async (id) => {
+      if (!confirm('Delete this note?')) return;
+      await deleteNote(id);
+      loadNotes();
+    };
+
+    // Load notes on page open
+    loadNotes();
+  </script>
+</body>
+</html>
