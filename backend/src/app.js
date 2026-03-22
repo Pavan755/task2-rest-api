@@ -3,33 +3,30 @@ const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 
-// Database runs on startup
 require('./db/database');
 
 const authRoutes = require('./routes/auth');
+const notesRoutes = require('./routes/notes');
 
 const app = express();
 
-// Security headers on every response
 app.use(helmet());
-
-// Allow requests from our React frontend
 app.use(cors({
-  origin: 'http://localhost:5173', // Vite's default port
+  origin: 'http://localhost:5173',
   credentials: true,
 }));
-
 app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/notes', notesRoutes);
 
 // Health check
 app.get('/', (req, res) => {
   res.json({ message: 'API is running' });
 });
 
-// Handle unknown routes
+// Unknown routes
 app.use((req, res) => {
   res.status(404).json({ error: 'Route not found' });
 });
